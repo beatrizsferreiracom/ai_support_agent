@@ -1,2 +1,2 @@
 # ai_support_agent
-Suport Agent automatized using Ollama and Ministral.
+Suport Agent automatized using GPT 4o Mini and CrewAI.
