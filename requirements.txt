@@ -1,0 +1,6 @@
+crewai
+langchain-openai
+streamlit
+python-dotenv
+duckdb
+pandas
