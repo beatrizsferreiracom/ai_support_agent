@@ -5,18 +5,14 @@ class SupportTasks:
     def answer_customer_question(self, agent, category, query):
         return Task(
             description=(
-                f"A customer has submitted a question.\n"
-                f"**Category:** {category}\n"
-                f"**Question** {query}\n\n"
-                "Steps to follow:\n"
-                "1. Use the 'Search FAQ Database' tool to find relevant Q&A pairs for this category and query.\n"
-                "2. Analyze the search results to match the specifc product or issue mentioned.\n"
-                "3. Formulate a friendly, helpful, and direct answer based ONLY on the search results."
+                f"Category: {category}\n"
+                f"Customer question: {query}\n\n"
+                "Steps:\n"
+                "- Search the FAQ database.\n"
+                "- Identify the product implicitly from the results.\n"
+                "- Answer ONLY using the retrieved data.\n"
+                "- If no results are found, say so clearly."
             ),
-            expected_output=(
-                "A natural language response answering the customer's question."
-                "The tone shold be professional and helpful. "
-                "Do not mention technical details like 'search score' or 'database'."
-            ),
+            expected_output="A clear and helpful answer based strictly on the FAQ.",
             agent=agent
         )

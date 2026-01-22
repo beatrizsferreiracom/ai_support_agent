@@ -8,19 +8,34 @@ def ingest_data():
     if os.path.exists(db_path):
         os.remove(db_path)
 
-    print(f"Creating databse at {db_path}...")
-    connection = duckdb.connect(db_path)
+    con = duckdb.connect(db_path)
 
-    print("Ingesting CSV data...")
-    connection.sql(f"CREATE TABLE faqs AS SELECT * FROM read_csv_auto('{csv_path}', ignore_erros=true)")
-    
-    print("Creating Full Text Search indexex...")
-    connection.sql("INSTALL fts; LOAD fts;")
-    connection.sql("PRAGMA create_fts_index('faqs', 'product_id', 'question', 'answer')")
+    con.sql("""
+        CREATE TABLE faqs (
+            product_id VARCHAR,
+            question   VARCHAR,
+            answer     VARCHAR,
+            category   VARCHAR
+        )
+    """)
 
-    row_count = connection.sql("SELECT COUNT(*) FROM faqs").fetcone()[0]
-    print(f"Done! Databse created with {row_count} rows.")
-    connection.close()
+    con.sql(f"""
+        INSERT INTO faqs
+        SELECT * FROM read_csv(
+            '{csv_path}',
+            all_varchar=True,
+            header=True,
+            ignore_errors=True
+        )
+    """)
+
+    con.sql("INSTALL fts; LOAD fts;")
+    con.sql("PRAGMA create_fts_index('faqs', 'question', 'answer')")
+
+    rows = con.sql("SELECT COUNT(*) FROM faqs").fetchone()[0]
+    print(f"Database ready with {rows} rows")
+
+    con.close()
 
 if __name__ == "__main__":
-    ingest_data()    
+    ingest_data()

@@ -11,7 +11,7 @@ st.title("🤖 AI Customer Support Agent")
 st.markdown(
     """
     Bem-vindo ao sistema de suporte automatizado.
-    Este agente consulta uma vase de dados de FAQ para responder suas dúvidas sobre produtos.
+    Este agente consulta uma base de dados de FAQ para responder suas dúvidas sobre produtos.
     """)
 
 with st.sidebar:
@@ -56,7 +56,7 @@ if user_query:
             try:
                 result = run_support_crew(category=category, query=user_query)
 
-                response_text = str(result)
+                response_text = str(result)[:2000]
 
                 st.write(response_text)
 

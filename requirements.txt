@@ -1,6 +1,8 @@
-crewai
-langchain-openai
+crewai==0.63.6
+langchain-openai==0.1.23
 streamlit
 python-dotenv
 duckdb
 pandas
+langchain-core<0.3.0
+langgraph<0.3.0

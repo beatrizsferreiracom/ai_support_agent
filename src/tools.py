@@ -1,45 +1,66 @@
 import duckdb
 import os
+import re
 from langchain.tools import tool
+
+STOPWORDS = {
+    "the","is","it","this","that","can","be","used","with","for",
+    "to","of","and","or","a","an","on","over","how","does","do",
+    "im","i","am","are","was","were"
+}
+
+def extract_terms(text: str) -> list[str]:
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", "", text)
+    words = [w for w in text.split() if w not in STOPWORDS and len(w) > 2]
+    return list(dict.fromkeys(words))[:6]  # mantém ordem, limita OR
 
 class FAQTools:
 
     @tool("Search FAQ Database")
     def search_faq(category: str, query: str):
         """
-        Useful to search for specific product questions and answer in the FAQ database.
-        Always provide the 'category' (e.g., Appliances) and the user's 'query' or keywords.
+        Search the FAQ database for relevant product questions and answers.
+
+        Inputs:
+        - category: Product category (e.g., Appliances)
+        - query: User question in natural language
+
+        Returns:
+        - A list of related FAQ entries (product_id, question, answer)
+        - Or NO_RESULTS if nothing relevant is found
+        - Or TOOL_ERROR if a database error occurs
         """
-        db_path = os.path.join("data", "faq_database.db")
+        db_path = os.path.join("data", "faq_dataset.db")
+        terms = extract_terms(query)
+
+        if not terms:
+            return "NO_RESULTS"
+
+        where_terms = " OR ".join(
+            [f"question ILIKE '%{t}%' OR answer ILIKE '%{t}%'" for t in terms]
+        )
+
+        sql = f"""
+        SELECT product_id, question, answer
+        FROM faqs
+        WHERE category = ?
+        AND ({where_terms})
+        LIMIT 30;
+        """
 
         try:
-            connection = duckdb.connect(db_path, read_only = True)
+            con = duckdb.connect(db_path, read_only=True)
+            rows = con.execute(sql, [category]).fetchall()
+            con.close()
 
-            sql_query = """
-            SELECT product_id, question, answer, score
-            FROM (
-                SELECT *, fts_main_faqs.match_bm25(product_id, question, answer, ?) AS score
-                FROM faqs
-                WHERE category = ?
+            if not rows:
+                return "NO_RESULTS"
+
+            return "\n---\n".join(
+                f"Product ID: {pid}\nQ: {q}\nA: {a}"
+                for pid, q, a in rows
             )
-            WHERE score IS NOT NULL
-            ORDER BY score DESC
-            LIMIT 5;
-            """   
 
-            connection.sql("INSTALL fts; LOAD fts;")
-            results = connection.execute(sql_query, [query, category]).fetchall()
-
-            connection.close()
-
-            if not results:
-                return "No relevant FAQs found for this query in the specified category."
-            
-            formatted_results = ""
-            for res in results: product_id, question, answer, score = res
-            formatted_results += f"Product ID: {product_id}\nQ: {question}\nA: {answer}\n(Relevance: {score})\n\---n"
-
-            return formatted_results
-        
         except Exception as e:
-            return f"Error querying database: {str(e)}"
+            return f"TOOL_ERROR: {e}"

@@ -6,19 +6,14 @@ def run_support_crew(category: str, query: str):
     agents = SupportAgents()
     tasks = SupportTasks()
 
-    support_agent = agents.support_specialist()
-    answer_task = tasks.answer_customer_question(
-        agent=support_agent,
-        category=category,
-        query=query
-    )
+    agent = agents.support_specialist()
+    task = tasks.answer_customer_question(agent, category, query)
 
     crew = Crew(
-        agents=[support_agent],
-        tasks=[answer_task],
+        agents=[agent],
+        tasks=[task],
         process=Process.sequential,
         verbose=True
     )
 
-    result = crew.kickoff()
-    return result
+    return crew.kickoff()
