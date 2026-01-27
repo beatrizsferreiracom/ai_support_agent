@@ -1,5 +1,6 @@
 import streamlit as st 
 from src.crew import run_support_crew
+from src.categories import load_categories
 from dotenv import load_dotenv
 import os
 
@@ -12,7 +13,10 @@ st.markdown(
     """
     Welcome to the automated support system.
     This agent consults a FAQ database to answer your product questions.
-    """)
+    """
+)
+
+# Sidebar
 
 with st.sidebar:
     st.header("Settings")
@@ -26,35 +30,58 @@ with st.sidebar:
 
     st.markdown("---")
 
-    category = st.text_input("Product Category", value="Appliances")
+    categories = load_categories()
+
+    if not categories:
+        categories = ["Appliances"]
+
+    category = st.selectbox(
+        "Product Category",
+        categories
+    )
 
     st.info(
-        "Tip: The category helps the agent filter the database "
+        "The category helps the agent filter the database "
         "before searching for the specific answer."
     )
 
+# Session state
+
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Olá! Como posso ajudar você hoje?"}
+        {
+            "role": "assistant",
+            "content": (
+                "Hello! How can I help you today? 😊\n\n"
+                f"Tip: Select the desired category on the sidebar before asking."
+            )
+        }
     ]
 
+if "pending_options" not in st.session_state:
+    st.session_state.pending_options = None
+
+# Render chat
+
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.chat_message("user").write(msg["content"])
-    else:
-        st.chat_message("assistant").write(msg["content"])
+    st.chat_message(msg["role"]).write(msg["content"])
+
+# Input
 
 user_query = st.chat_input("Type your question about the product...")
 
+# Numeric disambiguation
+
 if user_query and user_query.isdigit() and st.session_state.pending_options:
     idx = int(user_query) - 1
-
     if 0 <= idx < len(st.session_state.pending_options):
         user_query = st.session_state.pending_options[idx]
         st.session_state.pending_options = None
     else:
-        st.error("Opção inválida.")
+        st.error("Invalid option.")
         st.stop()
+
+# Main flow
 
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
@@ -62,25 +89,19 @@ if user_query:
 
     with st.chat_message("assistant"):
         with st.spinner(f"Searching the database (Category: {category})..."):
-            try:
-                result = run_support_crew(category=category, query=user_query)
+            result = run_support_crew(category=category, query=user_query)
+            response_text = str(result)[:2000]
 
-                response_text = str(result)[:2000]
+            lines = response_text.splitlines()
+            options = []
 
-                lines = response_text.splitlines()
-                options = []
+            for line in lines:
+                if line.strip().startswith(tuple("123456789")):
+                    options.append(line.split(".", 1)[1].strip())
 
-                for line in lines:
-                    if line.strip().startswith(tuple("123456789")):
-                        option = line.split(".", 1)[1].strip()
-                        options.append(option)
+            st.session_state.pending_options = options if options else None
 
-                if options:
-                    st.session_state.pending_options = options
-
-                st.write(response_text)
-
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+            st.write(response_text)
+            st.session_state.messages.append(
+                {"role": "assistant", "content": response_text}
+            )
