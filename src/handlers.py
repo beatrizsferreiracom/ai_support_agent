@@ -19,7 +19,7 @@ def handle_question(question: str, category: str) -> str:
     result = resolve_results(rows)
 
     if result["type"] == "NO_RESULTS":
-        return "The information was not found in the FAQ database."
+        return "The information was not found in the FAQ database. Please try providing more details."
 
     if result["type"] == "ANSWER":
         return result["answer"]
