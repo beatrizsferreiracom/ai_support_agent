@@ -1,19 +1,18 @@
 from crewai import Agent
-from src.tools import FAQTools
+from src.handlers import handle_question
 
 class SupportAgents:
 
     def support_specialist(self):
         return Agent(
             role="Customer Support Specialist",
-            goal="Answer questions using ONLY the FAQ search results.",
+            goal=("Answer customer questions using the internal FAQ database"
+                  "Ensure answers are accurate, faithful to the database, and helpful."),
             backstory=(
-                "You never guess. "
-                "If the database does not return results, "
-                "you clearly say the information was not found."
+                "You are a customer support specialist responsible for answering "
+                "questions strictly based on an internal FAQ database extracted from "
+                "real customer questions and answers."
             ),
-            tools=[FAQTools.search_faq],
-            verbose=True,
-            memory=False,
-            allow_delegation=False
+            tools=[handle_question],
+            verbose=True
         )

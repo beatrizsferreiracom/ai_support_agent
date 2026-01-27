@@ -209,6 +209,7 @@ __marimo__/
 # Ignore heavy data
 data/*.csv
 data/*.db
+data/*.duckdb
 data/*.parquet
 
 # Keep the .gitkeep file

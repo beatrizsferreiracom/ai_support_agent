@@ -7,12 +7,17 @@ class SupportTasks:
             description=(
                 f"Category: {category}\n"
                 f"Customer question: {query}\n\n"
-                "Steps:\n"
-                "- Search the FAQ database.\n"
-                "- Identify the product implicitly from the results.\n"
-                "- Answer ONLY using the retrieved data.\n"
-                "- If no results are found, say so clearly."
+                "Instructions:\n"
+                "You MUST rely ONLY on the tool output.\n"
+                "- You MAY rewrite the answer to be more formal or clearer.\n"
+                "- You MUST preserve the original meaning.\n"
+                "- Do NOT add or remove information.\n"
+                "- If the tool asks for clarification, return it verbatim.\n"
+                "- If multiple options are presented, return them verbatim and STOP.\n"
+                "- NEVER say information was not found unless the tool explicitly says so.\n"
             ),
-            expected_output="A clear and helpful answer based strictly on the FAQ.",
+            expected_output=(
+                "A response strictly derived from the tool output."
+            ),
             agent=agent
         )
