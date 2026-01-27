@@ -1,66 +1,85 @@
 import duckdb
-import os
 import re
-from langchain.tools import tool
+
+DB_PATH = "data/faq_dataset.duckdb"
 
 STOPWORDS = {
-    "the","is","it","this","that","can","be","used","with","for",
-    "to","of","and","or","a","an","on","over","how","does","do",
-    "im","i","am","are","was","were"
+    "the", "is", "are", "a", "an", "of", "to", "with", "and",
+    "or", "for", "in", "on", "does", "do", "this", "that"
 }
 
-def extract_terms(text: str) -> list[str]:
-    text = text.lower()
-    text = re.sub(r"[^\w\s]", "", text)
-    words = [w for w in text.split() if w not in STOPWORDS and len(w) > 2]
-    return list(dict.fromkeys(words))[:6]  # mantém ordem, limita OR
+VAGUE_KEYWORDS = {
+    "how", "much", "many", "weigh", "weight", "does", "do"
+}
 
-class FAQTools:
 
-    @tool("Search FAQ Database")
-    def search_faq(category: str, query: str):
-        """
-        Search the FAQ database for relevant product questions and answers.
+def tokenize(text: str):
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return [
+        w for w in words
+        if (w not in STOPWORDS and len(w) > 2) or w.isdigit()
+    ][:6]
 
-        Inputs:
-        - category: Product category (e.g., Appliances)
-        - query: User question in natural language
 
-        Returns:
-        - A list of related FAQ entries (product_id, question, answer)
-        - Or NO_RESULTS if nothing relevant is found
-        - Or TOOL_ERROR if a database error occurs
-        """
-        db_path = os.path.join("data", "faq_dataset.db")
-        terms = extract_terms(query)
+def is_vague_question(tokens):
+    """
+    Vague question:
+    - few tokens
+    - or just generic words
+    """
+    if len(tokens) <= 2:
+        return True
 
-        if not terms:
-            return "NO_RESULTS"
+    meaningful = [t for t in tokens if t not in VAGUE_KEYWORDS]
+    return len(meaningful) == 0
 
-        where_terms = " OR ".join(
-            [f"question ILIKE '%{t}%' OR answer ILIKE '%{t}%'" for t in terms]
-        )
 
-        sql = f"""
-        SELECT product_id, question, answer
-        FROM faqs
-        WHERE category = ?
-        AND ({where_terms})
-        LIMIT 30;
-        """
+def search_faq(query: str, category: str, limit: int = 20):
+    query_clean = query.lower().strip()
 
-        try:
-            con = duckdb.connect(db_path, read_only=True)
-            rows = con.execute(sql, [category]).fetchall()
-            con.close()
+    if query_clean.startswith("please reply with"):
+        return []
 
-            if not rows:
-                return "NO_RESULTS"
+    tokens = tokenize(query_clean)
 
-            return "\n---\n".join(
-                f"Product ID: {pid}\nQ: {q}\nA: {a}"
-                for pid, q, a in rows
-            )
+    if not tokens:
+        return []
 
-        except Exception as e:
-            return f"TOOL_ERROR: {e}"
+    if is_vague_question(tokens):
+        return []
+
+    question_len = len(query)
+
+    like_clauses = " OR ".join(
+        [f"question LIKE '%{t}%'" for t in tokens]
+    )
+
+    score_expr = " + ".join(
+        [f"(question LIKE '%{t}%')::INT" for t in tokens]
+    )
+
+    sql = f"""
+    SELECT
+        product_id,
+        question,
+        answer,
+        question AS product_hint,
+        ({score_expr}) AS score
+    FROM faqs
+    WHERE category = ?
+      AND ({like_clauses})
+    ORDER BY
+        score DESC,
+        abs(length(question) - ?) ASC,
+        length(question) ASC
+    LIMIT ?
+    """
+
+    con = duckdb.connect(DB_PATH)
+    results = con.execute(
+        sql,
+        [category, question_len, limit]
+    ).fetchall()
+    con.close()
+
+    return results

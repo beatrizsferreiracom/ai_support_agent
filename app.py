@@ -10,27 +10,27 @@ load_dotenv()
 st.title("🤖 AI Customer Support Agent")
 st.markdown(
     """
-    Bem-vindo ao sistema de suporte automatizado.
-    Este agente consulta uma base de dados de FAQ para responder suas dúvidas sobre produtos.
+    Welcome to the automated support system.
+    This agent consults a FAQ database to answer your product questions.
     """)
 
 with st.sidebar:
-    st.header("Configurações")
+    st.header("Settings")
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        st.error("⚠️ OPENAI_API_KEY não encontrada no arquivo .env")
+        st.error("⚠️ OPENAI_API_KEY not found in the file .env")
         st.stop()
 
-    st.success("✅ API Key carregada")
+    st.success("✅ API Key loaded")
 
     st.markdown("---")
 
-    category = st.text_input("Categoria do Produto", value="Appliances")
+    category = st.text_input("Product Category", value="Appliances")
 
     st.info(
-        "Dica: A categoria ajuda o agente a filtrar o banco de dados de 1M de linhas "
-        "antes de buscar a resposta específica."
+        "Tip: The category helps the agent filter the database "
+        "before searching for the specific answer."
     )
 
 if "messages" not in st.session_state:
@@ -44,23 +44,43 @@ for msg in st.session_state.messages:
     else:
         st.chat_message("assistant").write(msg["content"])
 
-user_query = st.chat_input("Digite sua pergunta sobre o produto...")
+user_query = st.chat_input("Type your question about the product...")
 
+if user_query and user_query.isdigit() and st.session_state.pending_options:
+    idx = int(user_query) - 1
+
+    if 0 <= idx < len(st.session_state.pending_options):
+        user_query = st.session_state.pending_options[idx]
+        st.session_state.pending_options = None
+    else:
+        st.error("Opção inválida.")
+        st.stop()
 
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     st.chat_message("user").write(user_query)
 
     with st.chat_message("assistant"):
-        with st.spinner(f"Pesquisando na base de dados (Categoria: {category})..."):
+        with st.spinner(f"Searching the database (Category: {category})..."):
             try:
                 result = run_support_crew(category=category, query=user_query)
 
                 response_text = str(result)[:2000]
+
+                lines = response_text.splitlines()
+                options = []
+
+                for line in lines:
+                    if line.strip().startswith(tuple("123456789")):
+                        option = line.split(".", 1)[1].strip()
+                        options.append(option)
+
+                if options:
+                    st.session_state.pending_options = options
 
                 st.write(response_text)
 
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
 
             except Exception as e:
-                st.error(f"Ocorreu um erro: {e}")
+                st.error(f"An error occurred: {e}")
