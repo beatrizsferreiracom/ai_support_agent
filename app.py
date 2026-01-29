@@ -74,9 +74,22 @@ user_query = st.chat_input("Type your question about the product...")
 
 if user_query and user_query.isdigit() and st.session_state.pending_options:
     idx = int(user_query) - 1
+
+    if idx == len(st.session_state.pending_options) - 1:
+        st.session_state.pending_options = None
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "Please provide more details about your question."
+        })
+        st.chat_message("assistant").write(
+            "Please provide more details about your question."
+        )
+        st.stop()
+
     if 0 <= idx < len(st.session_state.pending_options):
         user_query = st.session_state.pending_options[idx]
         st.session_state.pending_options = None
+
     else:
         st.error("Invalid option.")
         st.stop()

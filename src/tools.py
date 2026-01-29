@@ -1,45 +1,14 @@
 import duckdb
 import re
+from src.text_utils import tokenize, normalize_numbers
 
 DB_PATH = "data/faq_dataset.duckdb"
-
-STOPWORDS = {
-    "the", "is", "are", "a", "an", "of", "to", "with", "and",
-    "or", "for", "in", "on", "does", "do", "this", "that"
-}
 
 VAGUE_KEYWORDS = {
     "how", "much", "many", "weigh", "weight", "does", "do"
 }
 
-NUMBER_WORDS = {
-    "zero": "0",
-    "one": "1",
-    "two": "2",
-    "three": "3",
-    "four": "4",
-    "five": "5",
-    "six": "6",
-    "seven": "7",
-    "eight": "8",
-    "nine": "9",
-    "ten": "10"
-}
-
-def tokenize(text: str):
-    words = re.findall(r"[a-z0-9]+", text.lower())
-    return [
-        w for w in words
-        if (w not in STOPWORDS and len(w) > 2) or w.isdigit()
-    ][:6]
-
-
 def is_vague_question(tokens):
-    """
-    Vague question:
-    - few tokens
-    - or just generic words
-    """
     if len(tokens) <= 2:
         return True
 
@@ -48,7 +17,7 @@ def is_vague_question(tokens):
 
 
 def search_faq(query: str, category: str, limit: int = 20):
-    query_clean = query.lower().strip()
+    query_clean = normalize_numbers(query.lower().strip())
 
     if query_clean.startswith("please reply with"):
         return []
