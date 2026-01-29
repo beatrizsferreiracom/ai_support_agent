@@ -16,10 +16,13 @@ def handle_question(question: str, category: str) -> str:
         keywords = " ".join(question_clean.split()[:5])
         rows = search_faq(keywords, category)
 
-    result = resolve_results(rows)
+    result = resolve_results(rows, question_clean)
 
     if result["type"] == "NO_RESULTS":
-        return "The information was not found in the FAQ database. Please try providing more details."
+        return (
+            "The information was not found in the FAQ database. "
+            "Please try providing more details."
+        )
 
     if result["type"] == "ANSWER":
         return result["answer"]
@@ -32,7 +35,7 @@ def handle_question(question: str, category: str) -> str:
 
         return (
             "I found information for more than one possible match.\n"
-            "Please reply with the number of the option you mean:\n\n"
+            "Please reply with the number that best matches your question:\n\n"
             f"{options_text}"
         )
 
