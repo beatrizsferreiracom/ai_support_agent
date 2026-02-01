@@ -65,17 +65,6 @@ if "selected_product" not in st.session_state:
 # Update selected product
 st.session_state.selected_product = product
 
-# --------------------------------------------------
-# Product Context Display
-# --------------------------------------------------
-
-st.markdown(
-    f"""
-    ### 🧾 Selected Product
-    **{st.session_state.selected_product}**
-    """
-)
-
 st.divider()
 
 # --------------------------------------------------
@@ -124,7 +113,7 @@ if user_query:
     )
 
     with st.chat_message("assistant"):
-        with st.spinner("Searching the FAQ database..."):
+        with st.spinner(f"Searching informations about the *{product}*..."):
             result = run_support_crew(
                 category=category,
                 product=st.session_state.selected_product,
