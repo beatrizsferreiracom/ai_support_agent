@@ -1,42 +1,16 @@
 from langchain.tools import tool
-from src.tools import search_faq
-from src.resolver import resolve_results
+from src.search.faq_search import search_faq
 
 @tool("Search FAQ Database")
-def handle_question(question: str, category: str) -> str:
+def handle_question(question: str, category: str, product: str) -> str:
     """
-    Searches the internal FAQ database and returns the best possible answer.
+    Searches the FAQ database for a specific product.
     """
 
-    question_clean = question.lower().strip()
-
-    rows = search_faq(question_clean, category)
+    rows = search_faq(question, category, product)
 
     if not rows:
-        keywords = " ".join(question_clean.split()[:5])
-        rows = search_faq(keywords, category)
+        return "NO_RESULTS"
 
-    result = resolve_results(rows, question_clean)
-
-    if result["type"] == "NO_RESULTS":
-        return (
-            "The information was not found in the FAQ database. "
-            "Please try providing more details."
-        )
-
-    if result["type"] == "ANSWER":
-        return result["answer"]
-
-    if result["type"] == "DISAMBIGUATE":
-        options_text = "\n".join(
-            f"{i+1}. {opt['product_hint']}"
-            for i, opt in enumerate(result["options"])
-        )
-
-        return (
-            "I found information for more than one possible match.\n"
-            "Please reply with the number that best matches your question:\n\n"
-            f"{options_text}"
-        )
-
-    return "The information was not found in the FAQ database."
+    best = rows[0]
+    return best[3]

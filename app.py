@@ -1,120 +1,141 @@
-import streamlit as st 
+import streamlit as st
 from src.crew import run_support_crew
-from src.categories import load_categories
+from src.db import get_categories, get_products_by_category
 from dotenv import load_dotenv
 import os
 
-st.set_page_config(page_title="AI Support Agent", page_icon="🤖")
+# --------------------------------------------------
+# Config
+# --------------------------------------------------
+
+st.set_page_config(
+    page_title="AI Support Agent",
+    page_icon="🤖",
+    layout="centered"
+)
 
 load_dotenv()
 
 st.title("🤖 AI Customer Support Agent")
 st.markdown(
     """
-    Welcome to the automated support system.
-    This agent consults a FAQ database to answer your product questions.
+    This assistant answers product questions using an internal FAQ database.
+    Select a **category** and a **product** before asking your question.
     """
 )
 
+# --------------------------------------------------
 # Sidebar
+# --------------------------------------------------
 
 with st.sidebar:
     st.header("Settings")
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        st.error("⚠️ OPENAI_API_KEY not found in the file .env")
+        st.error("⚠️ OPENAI_API_KEY not found in .env")
         st.stop()
 
     st.success("✅ API Key loaded")
-
     st.markdown("---")
 
-    categories = load_categories()
-
-    if not categories:
-        categories = ["Appliances"]
-
+    categories = get_categories()
     category = st.selectbox(
         "Product Category",
         categories
     )
 
-    st.info(
-        "The category helps the agent filter the database "
-        "before searching for the specific answer."
+    products = get_products_by_category(category)
+    product = st.selectbox(
+        "Product",
+        products,
+        help="Select the product you want to ask about"
     )
 
-# Session state
+# --------------------------------------------------
+# Session State
+# --------------------------------------------------
 
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [
-        {
-            "role": "assistant",
-            "content": (
-                "Hello! How can I help you today? 😊\n\n"
-                f"Tip: Select the desired category on the sidebar before asking."
-            )
-        }
-    ]
+    st.session_state.messages = []
 
-if "pending_options" not in st.session_state:
-    st.session_state.pending_options = None
+if "selected_product" not in st.session_state:
+    st.session_state.selected_product = product
 
-# Render chat
+# Update selected product
+st.session_state.selected_product = product
+
+# --------------------------------------------------
+# Product Context Display
+# --------------------------------------------------
+
+st.markdown(
+    f"""
+    ### 🧾 Selected Product
+    **{st.session_state.selected_product}**
+    """
+)
+
+st.divider()
+
+# --------------------------------------------------
+# Initial Assistant Message
+# --------------------------------------------------
+
+if not st.session_state.messages:
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": (
+            "Hello! 👋\n\n"
+            "You can ask questions about the selected product.\n"
+            "For example: *weight*, *color*, *dimensions*, *compatibility*."
+        )
+    })
+
+# --------------------------------------------------
+# Render Chat
+# --------------------------------------------------
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
+# --------------------------------------------------
 # Input
+# --------------------------------------------------
 
-user_query = st.chat_input("Type your question about the product...")
+user_query = st.chat_input("Ask something about the product...")
 
-# Numeric disambiguation
-
-if user_query and user_query.isdigit() and st.session_state.pending_options:
-    idx = int(user_query) - 1
-
-    if idx == len(st.session_state.pending_options) - 1:
-        st.session_state.pending_options = None
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": "Please provide more details about your question."
-        })
-        st.chat_message("assistant").write(
-            "Please provide more details about your question."
-        )
-        st.stop()
-
-    if 0 <= idx < len(st.session_state.pending_options):
-        user_query = st.session_state.pending_options[idx]
-        st.session_state.pending_options = None
-
-    else:
-        st.error("Invalid option.")
-        st.stop()
-
-# Main flow
+# --------------------------------------------------
+# Main Flow
+# --------------------------------------------------
 
 if user_query:
-    st.session_state.messages.append({"role": "user", "content": user_query})
+    # User message
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_query
+    })
     st.chat_message("user").write(user_query)
 
+    # Inject product context (light memory)
+    contextual_query = (
+        f"Considering the product {st.session_state.selected_product}, "
+        f"{user_query}"
+    )
+
     with st.chat_message("assistant"):
-        with st.spinner(f"Searching the database (Category: {category})..."):
-            result = run_support_crew(category=category, query=user_query)
+        with st.spinner("Searching the FAQ database..."):
+            result = run_support_crew(
+                category=category,
+                product=st.session_state.selected_product,
+                query=contextual_query
+            )
+
             response_text = str(result)[:2000]
 
-            lines = response_text.splitlines()
-            options = []
-
-            for line in lines:
-                if line.strip().startswith(tuple("123456789")):
-                    options.append(line.split(".", 1)[1].strip())
-
-            st.session_state.pending_options = options if options else None
-
             st.write(response_text)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": response_text}
-            )
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response_text
+            })

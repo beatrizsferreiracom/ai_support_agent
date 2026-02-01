@@ -24,6 +24,13 @@ def normalize_numbers(text: str) -> str:
         text = re.sub(rf"\b{word}\b", digit, text)
     return text
 
+def clean_text(text: str) -> str:
+    text = text.lower().strip()
+    text = normalize_numbers(text)
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
 def tokenize(text: str):
     words = re.findall(r"[a-z0-9]+", text.lower())
     return [

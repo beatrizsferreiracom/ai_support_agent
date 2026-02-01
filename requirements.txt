@@ -6,3 +6,5 @@ duckdb
 pandas
 langchain-core<0.3.0
 langgraph<0.3.0
+sentence-transformers==2.6.1
+torch>=2.0
