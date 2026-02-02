@@ -52,14 +52,19 @@ def extract_intent_terms(text: str) -> set[str]:
     tokens = re.findall(r"[a-z0-9]+", text.lower())
     return {t for t in tokens if t in INTENT_TERMS}
 
-def is_compatible(user_question: str, faq_question: str) -> bool:
+def compatibility_level(user_question: str, faq_question: str) -> str:
     user_terms = extract_intent_terms(user_question)
     faq_terms = extract_intent_terms(faq_question)
 
     if not user_terms:
-        return True
+        return "NEUTRAL"
+    
+    overlap = user_terms & faq_terms
 
-    return bool(user_terms & faq_terms)
+    if overlap: 
+        return "STRONG"
+    
+    return "WEAK"
 
 NUMBER_WORDS = {
     "zero": "0",

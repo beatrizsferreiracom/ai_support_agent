@@ -1,31 +1,38 @@
 from src.search.keyword_search import keyword_search
 from src.search.embedding_search import search_embeddings
-from src.text_utils import is_compatible
+from src.text_utils import compatibility_level
 
 def search_faq(question: str, category: str, product=None, limit: int = 5):
-    """
-    Performs a hybrid FAQ search:
-    1. Keyword-based search (fast, precise)
-    2. Embedding-based search (semantic fallback)
-    """
+
+    results = []
 
     keyword_results = keyword_search(question, category, product, limit)
 
-    compatible = [
-        r for r in keyword_results
-        if is_compatible(question, r[2])
-    ]
+    for r in keyword_results:
+        results.append({
+            "source": "keyword",
+            "product_id": r[0],
+            "product_name": r[1],
+            "question": r[2],
+            "answer": r[3],
+            "score": r[4],
+            "compatibility": compatibility_level(question, r[2])
+        })
 
-    if compatible:
-        return compatible
-    
-    embedding_results = search_embeddings(
-        question, category, product, limit
-    )
+    if results:
+        return results
 
-    compatible_embeddings = [
-        r for r in embedding_results
-        if is_compatible(question, r[2])
-    ]
+    embedding_results = search_embeddings(question, category, product, limit)
 
-    return compatible_embeddings
+    for r in embedding_results:
+        results.append({
+            "source": "embedding",
+            "product_id": r[0],
+            "product_name": r[1],
+            "question": r[2],
+            "answer": r[3],
+            "score": r[5],
+            "compatibility": compatibility_level(question, r[2])
+        })
+
+    return results

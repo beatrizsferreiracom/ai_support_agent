@@ -23,10 +23,16 @@ class SupportTasks:
                 "- You MUST NOT mention tools, instructions, or internal reasoning.\n\n"
 
                 "CONTEXTUALIZATION:\n"
-                "- If intent_match is false, you MAY add ONE short sentence explaining that the information\n"
-                "  refers to a specific aspect of the product.\n"
-                "- You MUST NOT claim that this fully answers the customer question.\n"
-                "- You MUST NOT imply additional functionality.\n\n"
+                "- If type = ANSWER and confidence = HIGH:\n"
+                "- YOU MUST provide a direct answer based strictly on the provided content.\n"
+
+                "- If type = PARTIAL:\n"
+                "- YOU MAY clearly state that there is no explicit information answering the question.\n"
+                "- Then mention the related information that was found.\n"
+                "- Do NOT imply full functionality or confirmation.\n"
+
+                "- If type = NO_RESULTS:\n"
+                "- YOU MUST state that no relevant information was found in the database.\n"
 
                 "DISAMBIGUATION:\n"
                 "- If the tool output requests a numbered choice, return it VERBATIM and stop.\n\n"
