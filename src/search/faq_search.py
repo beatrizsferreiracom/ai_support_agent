@@ -1,6 +1,5 @@
 from src.search.keyword_search import keyword_search
 from src.search.embedding_search import search_embeddings
-from src.text_utils import compatibility_level
 
 def search_faq(question: str, category: str, product=None, limit: int = 5):
 
@@ -15,12 +14,8 @@ def search_faq(question: str, category: str, product=None, limit: int = 5):
             "product_name": r[1],
             "question": r[2],
             "answer": r[3],
-            "score": r[4],
-            "compatibility": compatibility_level(question, r[2])
+            "score": r[4]
         })
-
-    if results:
-        return results
 
     embedding_results = search_embeddings(question, category, product, limit)
 
@@ -31,8 +26,7 @@ def search_faq(question: str, category: str, product=None, limit: int = 5):
             "product_name": r[1],
             "question": r[2],
             "answer": r[3],
-            "score": r[5],
-            "compatibility": compatibility_level(question, r[2])
+            "score": r[5]
         })
 
-    return results
+    return results[:limit]

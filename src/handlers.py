@@ -11,22 +11,16 @@ def handle_question(question: str, category: str, product: str) -> dict:
 
     if not rows:
         return {"type": "NO_RESULTS"}
-    
-    strong = [r for r in rows if r["compatibility"] == "STRONG"]
 
-    if strong:
-        best = strong[0]
-        return {
-            "type": "ANSWER",
-            "confidence": "HIGH",
-            "answer": best["answer"],
-            "matched_question": best["question"]
-        }
-    
-    best = rows[0]
-    return{
-        "type": "PARTIAL",
-        "confidence": "LOW",
-        "answer": best["answer"],
-        "matched_question": best["question"]
+    return {
+        "type": "EVIDENCE",
+        "question": question,
+        "candidates": [
+            {
+                "faq_question": r["question"],
+                "faq_answer": r["answer"],
+                "source": r["source"]
+            }
+            for r in rows
+        ]
     }
